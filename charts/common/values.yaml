@@ -1,0 +1,218 @@
+### Required
+image:
+  repository: nginx
+  tag: latest
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+  # - name: gcr-json-key
+
+envFrom:
+  - configMapRef:
+      name: configName
+  - secretRef:
+      name: secretName
+
+resources:
+  requests:
+    cpu: 40m
+    memory: 363Mi
+  limits:
+    memory: 1024M
+
+replicaCount: 1
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 2
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+service:
+  annotations: {}
+  type: ClusterIP
+  servicePort: 80
+  containerPort: 80
+  protocol: TCP
+  additionalPorts: []
+  #   - servicePort: 443
+  #     containerPort: 443
+  #     protocol: TCP #default TCP
+  #     name: https #required and cannot be same with another port name
+
+route:
+  # -- Enable an OpenShift Route for the Argo CD server
+  enabled: false
+  # -- Openshift Route annotations
+  annotations: {}
+  # -- Hostname of OpenShift Route
+  hostname: "chart-example.local"
+  # -- Termination type of Openshift Route
+  termination_type: passthrough
+  # -- Termination policy of Openshift Route
+  termination_policy: None
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+env:
+  name: develop #develop, release, prod
+gitRepo: 
+  name: core-api # repo name e.g backend-service
+podAnnotations:
+  kubernetes.io/change-cause: "CHANGE_CAUSE_MESSAGE"
+  sidecar.istio.io/inject: "true"
+  gitUrl: "https://github.com"
+
+### Optional
+nameOverride: ""
+fullnameOverride: ""
+
+# -- @param `updateStrategy` is a Strategy how deployment will Rollout the Updates
+updateStrategy: {}
+  # type: RollingUpdate
+  # rollingUpdate:
+  #   maxSurge: 25%
+  #   maxUnavailable: 0%
+
+nodeSelector: {}
+
+enVar: []
+  # Reflection pattern for web services on kubernetes.
+  # See here for more info: https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/
+  # - name: MY_POD_NAME
+  #   valueFrom:
+  #     fieldRef:
+  #       fieldPath: metadata.name
+  # - name: MY_POD_NAMESPACE
+  #   valueFrom:
+  #     fieldRef:
+  #       fieldPath: metadata.namespace
+  # - name: MY_NODE_NAME
+  #   valueFrom:
+  #     fieldRef:
+  #       fieldPath: spec.nodeName
+  # - name: MY_HOST_IP
+  #   valueFrom:
+  #     fieldRef:
+  #       fieldPath: status.hostIP
+  # - name: MY_POD_IP
+  #   valueFrom:
+  #     fieldRef:
+  #       fieldPath: status.podIP
+
+volumeMounts: []
+  # - name: configName
+  #   mountPath: /targetPath
+  #   subPath: fileName
+volumes: []
+  # - name: configName
+  #   configMap:
+  #     name: configName
+  #     items:
+  #       - key: fileName
+  #         path: fileName
+  ## Add volumes if sidecar enabled or needed ##
+  # - name: db-proxy-credentials
+  #         secret:
+  #           secretName: db-proxy-credentials
+
+livenessProbe: {}
+  # failureThreshold: 10
+  # httpGet:
+  #   path: /healthz
+  #   port: 80
+  #   scheme: HTTP
+  # initialDelaySeconds: 10
+  # periodSeconds: 10
+  # successThreshold: 1
+  # timeoutSeconds: 20
+readinessProbe: {}
+  # failureThreshold: 10
+  # httpGet:
+  #   path: /healthz
+  #   port: 80
+  #   scheme: HTTP
+  # initialDelaySeconds: 10
+  # periodSeconds: 10
+  # successThreshold: 1
+  # timeoutSeconds: 10
+startupProbe: {}
+  # httpGet:
+  #   path: /healthz
+  #   port: liveness-port
+  # failureThreshold: 30
+  # periodSeconds: 10
+lifeCycle: {}
+  # preStop:
+  #   exec:
+  #     command:
+  #     - sleep
+  #     - "15"
+
+initContainers: []
+  # - name: sysctl
+  #   image: busybox:1.31.1
+  #   imagePullPolicy: IfNotPresent
+  #   securityContext:
+  #     privileged: true
+  #     runAsUser: 0
+  #   command: ['sh', '-c', 'sysctl -w fs.inotify.max_user_watches=32768']
+  # - name: initContainers2
+  #   image: busybox:1.31.1
+  #   imagePullPolicy: IfNotPresent
+  #   securityContext:
+  #     privileged: true
+  #     runAsUser: 0
+  #   command: ['sh', '-c', 'sysctl -w fs.inotify.max_user_watches=32768']
+
+sidecar:
+  enabled: false
+  sidecarContainers:
+  - name: cloudsql-proxy
+    image: gcr.io/cloudsql-docker/gce-proxy:1.16
+    command: ["/cloud_sql_proxy",
+              "-instances=projectname:zone:dbInstanceName=tcp:dbPort",
+              # If running on a VPC, the Cloud SQL proxy can connect via Private IP. See:
+              # https://cloud.google.com/sql/docs/mysql/private-ip for more info.
+              "-ip_address_types=PRIVATE",
+              "-credential_file=/secrets/service_account.json"]
+    securityContext:
+      runAsUser: 2  # non-root user
+      allowPrivilegeEscalation: false
+    volumeMounts:
+      - name: db-proxy-credentials
+        mountPath: /secrets/
+        readOnly: true
+
+podSecurityContext: {}
+  # fsGroup: 2000
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: false
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+tolerations: []
+affinity: {}

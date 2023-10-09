@@ -1,0 +1,15 @@
+apiVersion: v1
+entries:
+  common:
+  - apiVersion: v2
+    appVersion: 0.1.0
+    created: "2023-10-10T00:16:09.770512+07:00"
+    description: A Helm chart for Kubernetes
+    digest: 1635196892cca6ca19b5ac7c936e740690909bf4706d76180c2da0945231d7bc
+    icon: https://i0.wp.com/divistant.com/wp-content/uploads/2020/10/color_favicon.png
+    name: common
+    type: application
+    urls:
+    - https://hrofiq.github.io/helm-charts/common-0.1.0.tgz
+    version: 0.1.0
+generated: "2023-10-10T00:16:09.76987+07:00"
